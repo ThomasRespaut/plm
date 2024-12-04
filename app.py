@@ -13,19 +13,27 @@ from chatbot import ChatbotClient  # Importer la classe extérieure
 
 load_dotenv()
 
-from openai import OpenAI
-
 # Initialiser le client chatbot
 chatbot_client = ChatbotClient()
 
 class App:
-    def __init__(self, root, db_manager, role):
+    def __init__(self, root, db_manager, username, role):
         self.root = root
         self.db_manager = db_manager
         self.role = role
 
-        self.root.title("Gestion de la Base de Données avec Chatbot")
+        self.root.title("Perfumery.exe")
         self.root.geometry("1200x700")  # Taille adaptée pour inclure les ajustements
+
+        # Ajouter un label en haut à droite pour afficher le rôle de l'utilisateur connecté
+        self.role_label = tk.Label(
+            self.root,
+            text=f"Connecté en tant que : {username} ({role})",
+            anchor="e",  # Aligner à droite
+            bg="lightgrey",
+            font=("Arial", 10, "italic")
+        )
+        self.role_label.pack(side="top", fill="x")  # S'étendre horizontalement en haut
 
         # Cadre principal (Gestion des proportions)
         self.main_frame = tk.PanedWindow(self.root, orient="horizontal", sashwidth=5)
@@ -213,9 +221,9 @@ if __name__ == "__main__":
     db_manager = DatabaseManager(host=HOST, user=USER, password=PASSWORD, database=DATABASE)
     db_manager.connect()
 
-    def on_login_success(role):
+    def on_login_success(username,role):
         root = tk.Tk()
-        app = App(root, db_manager, role)
+        app = App(root, db_manager, username,role)
         root.mainloop()
 
     login_root = tk.Tk()

@@ -99,3 +99,17 @@ INSERT INTO order_details (order_id, reference_id, quantity, price)
 VALUES
     (1, 1, 1, 79.99), -- 1 Eau de Parfum (Classique Collection)
     (1, 3, 1, 59.99); -- 1 Eau de Toilette (Sportive Collection)
+
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(50) NOT NULL,
+    role ENUM('admin', 'editor', 'viewer','customer') NOT NULL
+);
+
+INSERT INTO users (username, password, role) VALUES
+('admin', 'admin123', 'admin'),
+('editor', 'editor123', 'editor'),
+('viewer', 'viewer123', 'viewer');
+

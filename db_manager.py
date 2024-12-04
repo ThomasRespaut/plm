@@ -1,4 +1,6 @@
 import mysql.connector
+from mysql.connector import Error
+import bcrypt
 
 class DatabaseManager:
     def __init__(self, host, user, password, database):
@@ -17,6 +19,50 @@ class DatabaseManager:
         except mysql.connector.Error as err:
             print(f"Erreur lors de la connexion : {err}")
             raise
+
+    def add_customer(self, first_name, last_name, email, phone, address, city, country, password):
+        if not self.connection:
+            print("Connexion à la base de données non disponible.")
+            return False
+
+        try:
+            cursor = self.connection.cursor()
+
+            # Hachage du mot de passe (recommandé)
+            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+            # Insérer les informations dans la table `customers`
+            sql_query = """
+                INSERT INTO customers (
+                    first_name, last_name, email, phone_number, address, city, country, created_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+            """
+            cursor.execute(sql_query, (first_name, last_name, email, phone, address, city, country))
+
+            # Générer le nom d'utilisateur (firstname.lastname)
+            username = f"{first_name.lower()}.{last_name.lower()}"
+
+            # Insérer les informations dans la table `users`
+            sql_user_query = """
+                INSERT INTO users (
+                    username, password, role
+                ) VALUES (%s, %s, %s)
+            """
+            cursor.execute(sql_user_query, (username, password, 'customer'))  # Le rôle par défaut est 'customer'
+
+            # Valider la transaction
+            self.connection.commit()
+            print("Client et utilisateur ajoutés avec succès.")
+            return True
+        except Error as e:
+            print(f"Erreur lors de l'insertion du client ou de l'utilisateur : {e}")
+            self.connection.rollback()  # Annuler en cas d'erreur
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+
+
 
     def close(self):
         if self.connection and self.connection.is_connected():
@@ -100,5 +146,7 @@ class DatabaseManager:
         except mysql.connector.Error as e:
             print(f"Erreur lors de la suppression : {e}")
             raise
+
+
 
 
