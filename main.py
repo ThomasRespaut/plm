@@ -1,16 +1,26 @@
-# This is a sample Python script.
+import os
+from dotenv import load_dotenv
 
-# Press Maj+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import json
 
+load_dotenv()
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+class Assistant:
+
+    def __init__(self):
+        self.openai_api_key = os.getenv('OPENAI_API_KEY')
+        self.openai_model = "chatgpt4o-mini"
+
+        # Récupérer les fonctions possibles :
+        with open("tools.json", "r") as file:
+            self.tools = json.load(file)
+
+        print(self.tools)
 
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    assistant = Assistant()
+
+
