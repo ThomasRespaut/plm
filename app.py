@@ -7,8 +7,6 @@ import os
 from dotenv import load_dotenv
 import threading
 import time
-import threading
-import time
 from chatbot import ChatbotClient  # Importer la classe extérieure
 
 load_dotenv()
@@ -20,6 +18,7 @@ class App:
     def __init__(self, root, db_manager, username, role):
         self.root = root
         self.db_manager = db_manager
+        self.username = username
         self.role = role
 
         self.root.title("Perfumery.exe")
@@ -39,6 +38,21 @@ class App:
         self.main_frame = tk.PanedWindow(self.root, orient="horizontal", sashwidth=5)
         self.main_frame.pack(fill="both", expand=True)
 
+        # Définir l'interface en fonction du rôle
+        if role == "admin":
+            self.setup_admin_interface()
+        elif role == "editor":
+            self.setup_editor_interface()
+        elif role == "customer":
+            self.setup_customer_interface()
+        elif role == "viewer":
+            self.setup_viewer_interface()
+        else:
+            # Par défaut, on considère le rôle comme "viewer"
+            self.setup_viewer_interface()
+
+    def setup_admin_interface(self):
+        """Configurer l'interface pour le rôle admin."""
         # Cadre gauche pour la gestion des tables
         self.left_frame = tk.Frame(self.main_frame, bg="white")
         self.main_frame.add(self.left_frame, width=900)  # 75% de la largeur
@@ -48,10 +62,61 @@ class App:
         self.main_frame.add(self.right_frame, width=300)  # 25% de la largeur
 
         # Interface de gestion des tables
+        self.setup_table_management()
+
+        # Boutons pour les actions CRUD
+        self.setup_crud_buttons(admin=True)
+
+        # Interface du chatbot
+        self.setup_chatbot_interface()
+
+    def setup_editor_interface(self):
+        """Configurer l'interface pour le rôle editor."""
+        # Cadre gauche pour la gestion des tables
+        self.left_frame = tk.Frame(self.main_frame, bg="white")
+        self.main_frame.add(self.left_frame, width=900)
+
+        # Cadre droit pour le chatbot
+        self.right_frame = tk.Frame(self.main_frame, bg="lightgrey")
+        self.main_frame.add(self.right_frame, width=300)
+
+        # Interface de gestion des tables
+        self.setup_table_management()
+
+        # Boutons pour les actions CRUD (pas de suppression)
+        self.setup_crud_buttons(admin=False)
+
+        # Interface du chatbot
+        self.setup_chatbot_interface()
+
+    def setup_customer_interface(self):
+        """Configurer l'interface pour le rôle customer."""
+        # Cadre pour le chatbot uniquement
+        self.right_frame = tk.Frame(self.main_frame, bg="lightgrey")
+        self.main_frame.add(self.right_frame)  # Prend toute la largeur
+
+        # Interface du chatbot
+        self.setup_chatbot_interface()
+
+    def setup_viewer_interface(self):
+        """Configurer l'interface pour le rôle viewer."""
+        # Cadre pour le chatbot uniquement (ou autre interface spécifique)
+        self.right_frame = tk.Frame(self.main_frame, bg="lightgrey")
+        self.main_frame.add(self.right_frame)
+
+        # Interface du chatbot
+        self.setup_chatbot_interface()
+
+    def setup_table_management(self):
+        """Configurer l'interface de gestion des tables."""
+        # Interface de gestion des tables
         self.table_label = tk.Label(self.left_frame, text="Choisissez une table :")
         self.table_label.pack(pady=10)
 
-        self.table_combobox = ttk.Combobox(self.left_frame, values=["customers", "products", "product_ranges", "range_references"])
+        self.table_combobox = ttk.Combobox(
+            self.left_frame,
+            values=["customers", "products", "product_ranges", "range_references"]
+        )
         self.table_combobox.pack(pady=10)
         self.table_combobox.bind("<<ComboboxSelected>>", self.show_table_data)
 
@@ -62,7 +127,10 @@ class App:
         self.tree_scroll_y = tk.Scrollbar(self.tree_frame, orient="vertical")
         self.tree_scroll_x = tk.Scrollbar(self.tree_frame, orient="horizontal")
 
-        self.tree = ttk.Treeview(self.tree_frame, columns=(), show="headings", yscrollcommand=self.tree_scroll_y.set, xscrollcommand=self.tree_scroll_x.set)
+        self.tree = ttk.Treeview(
+            self.tree_frame, columns=(), show="headings",
+            yscrollcommand=self.tree_scroll_y.set, xscrollcommand=self.tree_scroll_x.set
+        )
         self.tree_scroll_y.config(command=self.tree.yview)
         self.tree_scroll_x.config(command=self.tree.xview)
 
@@ -70,30 +138,46 @@ class App:
         self.tree_scroll_x.pack(side="bottom", fill="x")
         self.tree.pack(expand=True, fill="both")
 
-        # Boutons pour les actions CRUD
+    def setup_crud_buttons(self, admin=False):
+        """Configurer les boutons CRUD."""
         self.action_frame = tk.Frame(self.left_frame)
         self.action_frame.pack(pady=10)
 
-        self.insert_button = tk.Button(self.action_frame, text="Insérer une ligne", command=self.insert_row, state="normal" if role in ("admin", "editor") else "disabled")
+        self.insert_button = tk.Button(
+            self.action_frame, text="Insérer une ligne", command=self.insert_row
+        )
         self.insert_button.grid(row=0, column=0, padx=10)
 
-        self.update_button = tk.Button(self.action_frame, text="Modifier une ligne", command=self.edit_row, state="normal" if role in ("admin", "editor") else "disabled")
+        self.update_button = tk.Button(
+            self.action_frame, text="Modifier une ligne", command=self.edit_row
+        )
         self.update_button.grid(row=0, column=1, padx=10)
 
-        self.delete_button = tk.Button(self.action_frame, text="Supprimer une ligne", command=self.delete_row, state="normal" if role == "admin" else "disabled")
+        self.delete_button = tk.Button(
+            self.action_frame, text="Supprimer une ligne", command=self.delete_row
+        )
         self.delete_button.grid(row=0, column=2, padx=10)
 
-        # Interface du chatbot
+        if not admin:
+            # Désactiver le bouton de suppression pour les éditeurs
+            self.delete_button.config(state="disabled")
+
+    def setup_chatbot_interface(self):
+        """Configurer l'interface du chatbot."""
         self.chat_label = tk.Label(self.right_frame, text="Chatbot OpenAI", bg="lightgrey")
         self.chat_label.pack(pady=5)
 
-        self.chat_display = tk.Text(self.right_frame, height=20, state="disabled", bg="white", wrap="word")
+        self.chat_display = tk.Text(
+            self.right_frame, height=20, state="disabled", bg="white", wrap="word"
+        )
         self.chat_display.pack(expand=True, fill="both", padx=10, pady=5)
 
         self.chat_entry = tk.Entry(self.right_frame)
         self.chat_entry.pack(side="left", fill="x", expand=True, padx=10, pady=5)
 
-        self.chat_send_button = tk.Button(self.right_frame, text="Envoyer", command=self.send_to_chatbot)
+        self.chat_send_button = tk.Button(
+            self.right_frame, text="Envoyer", command=self.send_to_chatbot
+        )
         self.chat_send_button.pack(side="right", padx=10, pady=5)
 
     def show_table_data(self, event):
@@ -104,10 +188,11 @@ class App:
         self.tree["columns"] = columns
         for col in columns:
             self.tree.heading(col, text=col)
-            self.tree.column(col, anchor="center", width=150)  # Limiter la largeur des colonnes
+            self.tree.column(col, anchor="center", width=150)
 
         for row in rows:
             self.tree.insert("", "end", values=row)
+
     def insert_row(self):
         selected_table = self.table_combobox.get()
         if not selected_table:
@@ -133,6 +218,7 @@ class App:
             self.show_table_data(None)
         except Exception as e:
             messagebox.showerror("Erreur", f"Une erreur est survenue : {e}")
+
     def edit_row(self):
         selected_item = self.tree.selection()
         if not selected_item:
@@ -147,7 +233,9 @@ class App:
         updates = {}
         for col in editable_columns:
             current_value = row_data[columns.index(col)]
-            new_value = simpledialog.askstring("Modification", f"Nouveau valeur pour {col} (actuel : {current_value}):")
+            new_value = simpledialog.askstring(
+                "Modification", f"Nouvelle valeur pour {col} (actuel : {current_value}):"
+            )
             if new_value:
                 updates[col] = new_value
 
@@ -158,6 +246,7 @@ class App:
                 self.show_table_data(None)
             except Exception as e:
                 messagebox.showerror("Erreur", f"Une erreur est survenue : {e}")
+
     def delete_row(self):
         selected_item = self.tree.selection()
         if not selected_item:
@@ -167,7 +256,9 @@ class App:
         row_data = self.tree.item(selected_item)["values"]
         selected_table = self.table_combobox.get()
 
-        confirm = messagebox.askyesno("Confirmation", f"Êtes-vous sûr de vouloir supprimer l'ID {row_data[0]} ?")
+        confirm = messagebox.askyesno(
+            "Confirmation", f"Êtes-vous sûr de vouloir supprimer l'ID {row_data[0]} ?"
+        )
         if confirm:
             try:
                 self.db_manager.delete_row(selected_table, self.tree["columns"][0], row_data[0])
@@ -175,6 +266,7 @@ class App:
                 self.show_table_data(None)
             except Exception as e:
                 messagebox.showerror("Erreur", f"Une erreur est survenue : {e}")
+
     def send_to_chatbot(self):
         user_message = self.chat_entry.get()
         if not user_message.strip():
@@ -221,9 +313,9 @@ if __name__ == "__main__":
     db_manager = DatabaseManager(host=HOST, user=USER, password=PASSWORD, database=DATABASE)
     db_manager.connect()
 
-    def on_login_success(username,role):
+    def on_login_success(username, role):
         root = tk.Tk()
-        app = App(root, db_manager, username,role)
+        app = App(root, db_manager, username, role)
         root.mainloop()
 
     login_root = tk.Tk()
